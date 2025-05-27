@@ -22,6 +22,40 @@ class UserDB:
         ''')
         self.conn.commit()
 
+    def load_from_excel(self, file_path):
+        df = pd.read_excel(file_path)
+
+        # Приводим названия столбцов к стандартному виду
+        df.columns = [col.strip().lower() for col in df.columns]
+
+        # Обрабатываем строки
+        for _, row in df.iterrows():
+            user_id = row.get("id")
+            first_name = row.get("first_name")
+            last_name = row.get("last_name")
+            username = row.get("username")
+            phone = str(row.get("phone")) if pd.notna(row.get("phone")) else None
+
+            # Пропускаем, если нет user_id
+            if pd.isna(user_id):
+                continue
+
+            # Проверка: есть ли такой user_id уже в базе
+            self.cursor.execute("SELECT 1 FROM users WHERE user_id = ?", (user_id,))
+            if self.cursor.fetchone():
+                continue  # Пропускаем, если уже есть
+
+            # Вставка нового пользователя
+            self.cursor.execute('''
+                INSERT INTO users (user_id, first_name, last_name, username, phone)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (user_id, first_name, last_name, username, phone))
+        
+        self.conn.commit()
+        print("Импорт завершён.")
+
+
+
     def add_user(self, user_id, first_name, last_name, username, phone=None):
         """Добавляет пользователя в базу данных с возможностью указать дату рождения"""
         self.cursor.execute("INSERT INTO users (user_id, first_name, last_name, username, phone) VALUES (?, ?, ?, ?, ?)",

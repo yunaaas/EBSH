@@ -377,7 +377,30 @@ async def handle_export_data(callback_query: types.CallbackQuery):
     )
 
 
+async def excel_upload_handler(message: types.Message):
+    if message.from_user.id not in admins:
+        return
 
+    if message.document.mime_type != 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+        await message.reply("Пожалуйста, отправьте файл в формате Excel (.xlsx).")
+        return
+
+    file_info = await bot.get_file(message.document.file_id)
+    downloaded = await bot.download_file(file_info.file_path)
+
+    local_path = message.document.file_name  # сохраняем в текущей папке
+    with open(local_path, "wb") as f:
+        f.write(downloaded.read())
+
+    try:
+        db = UserDB()
+        db.load_from_excel(local_path)
+        await message.reply("Данные успешно загружены в базу.")
+    except Exception as e:
+        await message.reply(f"Ошибка при загрузке данных: {e}")
+    finally:
+        if os.path.exists(local_path):
+            os.remove(local_path)
 
 def register_admin_handlers(dp: Dispatcher):
     dp.register_message_handler(cmd_send_message, commands=['send'], commands_prefix='|')
@@ -392,3 +415,4 @@ def register_admin_handlers(dp: Dispatcher):
     dp.register_callback_query_handler(view_admins_handler, lambda c: c.data == 'view_admins')
     dp.register_callback_query_handler(show_admin_info, lambda c: c.data.startswith('admin_'))
     dp.register_callback_query_handler(delete_admin_handler, lambda c: c.data.startswith('delete_'))
+    dp.register_message_handler(excel_upload_handler, content_types=types.ContentType.DOCUMENT)
