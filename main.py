@@ -5,7 +5,7 @@ from aiogram import Dispatcher, types
 from aiogram.utils import executor
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from config import bot
-from users_handlers import *  # Импортируем регистрацию хендлеров
+from users_handlers import *
 from admins_handlers import *
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 

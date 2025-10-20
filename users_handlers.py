@@ -205,8 +205,6 @@ async def handle_user_message(message: types.Message, state: FSMContext):
 
 
 
-
-
 # Обработчик для возврата в главное меню
 async def process_back_to_main(callback_query: types.CallbackQuery):
     """Возвращаем пользователя в главное меню."""
