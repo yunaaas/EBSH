@@ -5,7 +5,7 @@ def get_start_keyboard():
     keyboard = InlineKeyboardMarkup(row_width=1)  # 2 кнопки в строке
 
     # Кнопки
-    products_button = InlineKeyboardButton("🛒 Товары", callback_data="products", url="https://ebsh.taplink.ws/")
+    products_button = InlineKeyboardButton("🛒 Товары", callback_data="products", url="https://ebsh.shop")
     gift_button = InlineKeyboardButton("🎁 Получить подарок", callback_data="gift")
     support_button = InlineKeyboardButton("💬 Поддержка", callback_data="support")
     # dialog = InlineKeyboardButton("👤 Поговорить с человеком", callback_data="human")
