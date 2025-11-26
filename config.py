@@ -13,5 +13,5 @@ ya_token = os.getenv("YA_TOKEN")
 if not API_TOKEN:
     raise ValueError("BOT_TOKEN не найден в переменных окружения!")
 
-admins = [1012078689, 833158284, 2072703063, 1914263444]
+admins = [1012078689, 833158284, 2072703063, 431763402]
 main_admin = 1012078689
