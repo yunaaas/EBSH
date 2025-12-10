@@ -43,7 +43,7 @@ async def cmd_start(message: types.Message):
     user_db.add_user_if_not_exists(user.id, user.first_name, user.last_name, user.username)
 
     keyboard = get_start_keyboard()
-    with open("photo1.jpg", "rb") as photo:
+    with open("photo1.png", "rb") as photo:
         await message.answer_photo(
             photo=photo,
             caption= f"Здравствуйте, {user.first_name}\n{text}", 
