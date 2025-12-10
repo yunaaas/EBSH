@@ -6,7 +6,7 @@ def get_start_keyboard():
 
     # Кнопки
     products_button = InlineKeyboardButton("🛒 Товары", callback_data="products", url="https://ebsh.shop")
-    gift_button = InlineKeyboardButton("🎁 Получить подарок", callback_data="gift")
+    gift_button = InlineKeyboardButton("Бонус от EBSH ⭐️", callback_data="gift")
     support_button = InlineKeyboardButton("💬 Поддержка", callback_data="support")
     # dialog = InlineKeyboardButton("👤 Поговорить с человеком", callback_data="human")
 
