@@ -43,7 +43,7 @@ async def cmd_start(message: types.Message):
     user_db.add_user_if_not_exists(user.id, user.first_name, user.last_name, user.username)
 
     keyboard = get_start_keyboard()
-    with open("photo1.png", "rb") as photo:
+    with open("111.png", "rb") as photo:
         await message.answer_photo(
             photo=photo,
             caption= f"Здравствуйте, {user.first_name}\n{text}", 
@@ -62,40 +62,40 @@ async def cmd_start(message: types.Message):
 
 
 # Обработчик для кнопки "Поддержка"
-async def support_handler(callback_query: types.CallbackQuery):
-    keyboard = get_questions_keyboard()
-    await callback_query.message.edit_text(
-        "💬 Вы выбрали раздел: Поддержка\nНаши специалисты готовы помочь. Напишите вашу проблему в чат или задайте вопрос."
-    )
+# async def support_handler(callback_query: types.CallbackQuery):
+#     keyboard = get_questions_keyboard()
+#     await callback_query.message.edit_text(
+#         "💬 Вы выбрали раздел: Поддержка\nНаши специалисты готовы помочь. Напишите вашу проблему в чат или задайте вопрос."
+#     )
 
 
 
-    await callback_query.message.edit_reply_markup(reply_markup=keyboard)
+#     await callback_query.message.edit_reply_markup(reply_markup=keyboard)
 
 
 # Обработчик для кнопки "Отменить"
-async def cancel_question(callback_query: types.CallbackQuery, state: FSMContext):
-    """Отмена вопроса и возврат в меню вопросов."""
-    await callback_query.message.edit_text(
-        "💬 Вы выбрали раздел: Поддержка\nНаши специалисты готовы помочь. Напишите вашу проблему в чат или задайте вопрос.", 
-        reply_markup=get_questions_keyboard(), 
-        parse_mode=ParseMode.HTML
-    )
-    # Завершаем состояние
-    await state.finish()
-
 async def support_handler(callback_query: types.CallbackQuery):
     """Обрабатываем раздел 'Поддержка'."""
-    await callback_query.message.edit_text(
-        "💬 Вы выбрали раздел: Поддержка\nНаши специалисты готовы помочь. Напишите вашу проблему в чат или задайте вопрос."
-    )
+    
+    # 1. Сначала отвечаем на колбэк, чтобы кнопка не "висела"
     await callback_query.answer("Бежим смотреть ваш вопрос! 👀")
+
+    # 2. Создаем клавиатуру
     ask_button = InlineKeyboardButton(text="✍️ Задать вопрос", callback_data="ask_question")
     back_button = InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")
     keyboard = InlineKeyboardMarkup().add(ask_button).add(back_button)
 
-    await callback_query.message.edit_reply_markup(reply_markup=keyboard)
-
+    # 3. Отправляем НОВОЕ сообщение (answer), а не редактируем старое с фото
+    await callback_query.message.answer(
+        "💬 Вы выбрали раздел: <b>Поддержка</b>\nНаши специалисты готовы помочь. Напишите вашу проблему в чат или задайте вопрос.",
+        reply_markup=keyboard, parse_mode=ParseMode.HTML
+    )
+    
+    # 4. (Опционально) Убираем кнопки у старого сообщения с фото, чтобы не путаться
+    try:
+        await callback_query.message.edit_reply_markup(reply_markup=None)
+    except:
+        pass
 
 async def ask_own_question(callback_query: types.CallbackQuery, state: FSMContext):
     """Запрашиваем у пользователя вопрос и даём кнопку отмены."""

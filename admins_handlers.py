@@ -11,9 +11,37 @@ from aiogram import Dispatcher
 from aiogram import Bot
 from config import *
 from admins import *
+from aiogram.dispatcher.filters.state import State, StatesGroup
 
 user_db = UserDB()
 admin_db = AdminDB()
+
+class AdminStates(StatesGroup):
+    waiting_for_photo = State()
+
+async def handle_admin_photo(message: types.Message, state: FSMContext):
+    if message.from_user.id in admins:
+        photo_id = message.photo[-1].file_id  # Берем самое качественное фото
+        await state.update_data(saved_photo=photo_id)
+        await message.reply("🖼 <b>Фото сохранено!</b>\nТеперь отправьте команду: <code>|send |id| ваш текст</code>", parse_mode=ParseMode.HTML)
+
+async def cmd_check_photo(message: types.Message, state: FSMContext):
+    if message.from_user.id in admins:
+        # Получаем данные из памяти
+        data = await state.get_data()
+        photo_id = data.get("saved_photo")
+
+        if photo_id:
+            await message.answer("🖼 <b>В памяти сейчас находится это фото:</b>", parse_mode=ParseMode.HTML)
+            # Отправляем само фото, чтобы вы видели, что именно будет отправлено пользователям
+            await bot.send_photo(
+                chat_id=message.from_user.id, 
+                photo=photo_id, 
+                caption="Это фото прикрепится к следующей команде <code>|send</code>"
+            )
+        else:
+            await message.answer("❌ <b>В памяти нет сохраненных фото.</b>\nБудут отправляться только текстовые сообщения.", parse_mode=ParseMode.HTML)
+
 
 async def cmd_admin(message: types.Message):
     """Обрабатываем команду добавления администратора."""
@@ -42,55 +70,47 @@ async def cmd_admin(message: types.Message):
 
 
 
-async def cmd_send_message(message: types.Message):
-    if message.from_user.id in admins:  # Проверка, что это администратор
-        # Разделяем сообщение по символу '|'
+async def cmd_send_message(message: types.Message, state: FSMContext):
+    if message.from_user.id in admins:
         msg_parts = message.text.split("|")
         
-        if len(msg_parts) < 3:  # Проверяем, что есть достаточно параметров
-            await message.reply("<b>Неверный формат команды.</b> Используйте: <code>|send |id| сообщение</code>", parse_mode=ParseMode.HTML)
+        if len(msg_parts) < 3:
+            await message.reply("<b>Неверный формат.</b> Используйте: <code>|send |id| текст</code>", parse_mode=ParseMode.HTML)
             return
     
-        target = msg_parts[2].strip()  # ID пользователя или 'all'
-        text_message = msg_parts[3].strip()  # Сообщение
-    
-        if target == "all":  # Если рассылка всем
-            data = user_db.get_id()  # Получаем всех пользователей
+        target = msg_parts[2].strip()
+        text_message = msg_parts[3].strip() if len(msg_parts) > 3 else ""
+        
+        # Получаем фото из памяти, если оно там есть
+        state_data = await state.get_data()
+        photo_id = state_data.get("saved_photo")
+
+        # Функция-помощник для отправки (выбирает send_message или send_photo)
+        async def send_content(chat_id, text):
+            full_text = f"<b>Важное сообщение!</b>\n\n{text}\n\nС уважением, <b>команда EBSH</b>🫂"
+            if photo_id:
+                await bot.send_photo(chat_id, photo_id, caption=full_text, parse_mode=ParseMode.HTML)
+            else:
+                await bot.send_message(chat_id, full_text, parse_mode=ParseMode.HTML)
+
+        if target == "all":
+            data = user_db.get_id()
             for user_id in data:
                 try:
-                    await bot.send_message(chat_id=user_id[0], text=f"<b>Важное сообщение!</b>\n\n{text_message}\n\nС уважением, <b>команда EBSH</b>🫂", parse_mode=ParseMode.HTML)
-                    await asyncio.sleep(1)
-                except Exception as e:
+                    await send_content(user_id[0], text_message)
+                    await asyncio.sleep(0.05) # Небольшая задержка для защиты от флуда
+                except Exception:
                     continue
-                
-            await bot.send_message(message.from_user.id, text=f"<b>Сообщение отправлено всем пользователям.</b>", parse_mode=ParseMode.HTML)
-            
-            # Отправляем лог главному администратору
-            main_admin_id = main_admin  # Замените на ID главного администратора
-            await bot.send_message(main_admin_id, f"<i>Сообщение:</i> <b>'{text_message}'</b> \nБыло отправлено <b>всем</b> пользователям.", parse_mode=ParseMode.HTML)
-    
+            await message.answer("✅ Рассылка завершена.")
         else:
-            if user_db.get_user(target):  # Проверяем, есть ли пользователь с таким ID
-                await bot.send_message(message.from_user.id, text=f"<b>Сообщение отправлено пользователю {target}.</b>", parse_mode=ParseMode.HTML)
-                await bot.send_message(chat_id=target, text=f"<b>Важное сообщение!</b>\n\n{text_message}\n\nС уважением, <b>команда EBSH</b>🫂", parse_mode=ParseMode.HTML)
-                
-                # Отправляем лог главному администратору
-                main_admin_id = main_admin  # Замените на ID главного администратора
-                await bot.send_message(main_admin_id, f"<i>Сообщение:</i> <b>'{text_message}'</b> \nБыло отправлено пользователю с <b>ID {target}.</b>", parse_mode=ParseMode.HTML)
-    
-            else:
-                await bot.send_message(message.from_user.id, text="<b>Пользователь не найден.</b>", parse_mode=ParseMode.HTML)
-                
-                # Отправляем лог главному администратору, если пользователь не найден
-                main_admin_id = main_admin  # Замените на ID главного администратора
-                await bot.send_message(main_admin_id, f"<b>Попытка отправить сообщение пользователю с ID {target}, но пользователь не найден.</b>", parse_mode=ParseMode.HTML)
-    
-    else:
-        await bot.send_message(message.from_user.id, text="<b>У вас нет прав для отправки сообщений.</b>", parse_mode=ParseMode.HTML)
+            try:
+                await send_content(target, text_message)
+                await message.answer(f"✅ Отправлено пользователю {target}")
+            except Exception as e:
+                await message.answer(f"❌ Ошибка отправки: {e}")
         
-        # Отправляем лог главному администратору, если не администратор
-        main_admin_id = main_admin  # Замените на ID главного администратора
-        await bot.send_message(main_admin_id, f"<b>Попытка неавторизованного доступа от пользователя {message.from_user.id}.</b>", parse_mode=ParseMode.HTML)
+        # Очищаем фото из памяти после отправки (по желанию)
+        await state.finish()
 
 
 # Обработчик для кнопки "👑 Администраторы"
@@ -403,7 +423,9 @@ async def excel_upload_handler(message: types.Message):
             os.remove(local_path)
 
 def register_admin_handlers(dp: Dispatcher):
-    dp.register_message_handler(cmd_send_message, commands=['send'], commands_prefix='|')
+    dp.register_message_handler(handle_admin_photo, content_types=['photo'], user_id=admins)
+    # Обновляем это: добавляем state=None или '*' чтобы команда работала всегда
+    dp.register_message_handler(cmd_send_message, commands=['send'], commands_prefix='|', state='*')
     dp.register_message_handler(cmd_admin, commands=['admin'], commands_prefix='|')
     dp.register_message_handler(admin_menu, commands=['admin'])  # Обработчик команды /admin
     dp.register_callback_query_handler(handle_help, lambda c: c.data == 'help')  # Обработчик кнопки помощи
@@ -416,3 +438,4 @@ def register_admin_handlers(dp: Dispatcher):
     dp.register_callback_query_handler(show_admin_info, lambda c: c.data.startswith('admin_'))
     dp.register_callback_query_handler(delete_admin_handler, lambda c: c.data.startswith('delete_'))
     dp.register_message_handler(excel_upload_handler, content_types=types.ContentType.DOCUMENT)
+    dp.register_message_handler(cmd_check_photo, commands=['check'], state='*')
