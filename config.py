@@ -5,7 +5,7 @@ from aiogram import Bot
 
 load_dotenv()
 
-API_TOKEN = "5352353471:AAEeZ4W69c2n-25pN7BDeai-mVV16N0k8Pk"
+API_TOKEN = API_TOKEN = os.getenv("BOT_TOKEN")
 
 bot = Bot(token=API_TOKEN)
 ya_token = os.getenv("YA_TOKEN") 
